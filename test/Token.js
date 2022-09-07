@@ -23,6 +23,7 @@ describe("Token", ()=> {
         token = await Token.deploy('My Token', 'TOK', '1000000') // Gets the deployed copy of the contract
         accounts = await ethers.getSigners() // Get an array of Test Accounts
         deployer = accounts[0] // Get the 1st account as the deploying account.
+        receiver = accounts[1]
     })
 
     describe('Deployment', ()=> {
@@ -55,5 +56,61 @@ describe("Token", ()=> {
         it('assigns Total Supply to contract deployer', async()=> {
             expect(await token.balanceOf(deployer.address)).to.equal(totalSupply);
         })
+    })
+
+    describe('Sending Tokens', ()=> {
+        let amount, transaction, result
+
+        describe('Success', ()=>{
+            beforeEach(async ()=> {
+                amount = tokens(100)
+    
+                // Transfer tokens, take the deployer wallet and connect it to the contract to be able to sign transactions
+                transaction = await token.connect(deployer).transfer(receiver.address , amount)
+                result = await transaction.wait()
+            })
+    
+            it('transfers token balances', async()=> {
+                // Log balance before transfer
+                console.log('deployer balance before transfer', await token.balanceOf(deployer.address))
+                console.log('receiver balance before transfer', await token.balanceOf(receiver.address))
+    
+                expect(await token.balanceOf(deployer.address)).to.equal(tokens(999900))
+                expect(await token.balanceOf(receiver.address)).to.equal(amount)
+    
+                // Log balance after transfer.
+                console.log('deployer balance before transfer', await token.balanceOf(deployer.address))
+                console.log('receiver balance before transfer', await token.balanceOf(receiver.address))
+                // Ensure tokens were transfered, balance change.
+            })
+    
+            it('emits a Transfer event', async()=> {
+                const event = result.events[0]
+                // console.log(event)
+                expect(event.event).to.equal('Transfer')
+    
+                const args = event.args
+                expect(args.from).to.equal(deployer.address)
+                expect(args.to).to.equal(receiver.address)
+                expect(args.value).to.equal(amount)
+            })
+        })
+
+        describe('Failure', ()=> {
+            it('rejects insufficient balances', async ()=> {
+                // Transfers more tokens than the deployer has. (100M)
+                const invalidAmount = tokens(10000000 )
+                // Transfer tokens, take the deployer wallet and connect it to the contract to be able to sign transactions
+                // Below uses "waffle" for blockchain specific commands (like "reverted")
+                await expect(token.connect(deployer).transfer(receiver.address , invalidAmount)).to.be.reverted
+            })
+
+            it('rejects invalid recipient address', async ()=> {
+                const amount = tokens(100)
+                await expect(token.connect(deployer).transfer('0x0000000000000000000000000000000000000000', amount)).to.be.reverted
+            })
+        })
+
+        
     })
 }) 
