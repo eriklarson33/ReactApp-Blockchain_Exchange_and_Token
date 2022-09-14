@@ -11,7 +11,8 @@ describe("Token", ()=> {
     // Declare Token variable so that it's accessible to all funcitons. NOTE: Can make all declarations in 1 line.
     let token, 
         accounts, 
-        deployer
+        deployer,
+        exchange
     // let accounts
     // let deployer
 
@@ -23,7 +24,8 @@ describe("Token", ()=> {
         token = await Token.deploy('My Token', 'TOK', '1000000') // Gets the deployed copy of the contract
         accounts = await ethers.getSigners() // Get an array of Test Accounts
         deployer = accounts[0] // Get the 1st account as the deploying account.
-        receiver = accounts[1]
+        receiver = accounts[1] // Account for receiving tokens
+        exchange = accounts[2] // Account to represent a ficitonal exchange.
     })
 
     describe('Deployment', ()=> {
@@ -107,10 +109,43 @@ describe("Token", ()=> {
 
             it('rejects invalid recipient address', async ()=> {
                 const amount = tokens(100)
+                // The following uses Waffle for testing Smart Contracts with the code "to.be.reverted"
                 await expect(token.connect(deployer).transfer('0x0000000000000000000000000000000000000000', amount)).to.be.reverted
             })
         })
-
         
+    })
+
+    describe('Approving Tokens', () => {
+        let amount, transaction, result
+
+        beforeEach(async () => {
+            amount = tokens(100)
+            console.log('Max amount should equal', amount)
+            transaction = await token.connect(deployer).approve(exchange.address, amount)
+            result = await transaction.wait()
+        })
+
+        describe('Success', async () => {
+            it('allocates an allowance for delegated token spending', async () => {
+                expect(await token.allowance(deployer.address, exchange.address)).to.equal(amount)
+            })
+
+            it('emits an Approval event', async () => {
+                const event = result.events[0]
+                expect(event.event).to.equal('Approval')
+
+                const args = event.args
+                expect(args.owner).to.equal(deployer.address)
+                expect(args.spender).to.equal(exchange.address)
+                expect(args.value).to.equal(amount)
+            })
+        })
+
+        describe('Failure', () => {
+            it('rejects invalid spenders', async () => {
+                await expect(token.connect(deployer).approve('0x0000000000000000000000000000000000000000', amount)).to.be.reverted
+              })
+        })
     })
 }) 
