@@ -44,17 +44,28 @@ contract Token{
     {
         // Require that Sender has enough tokens to spend.
         require(balanceOf[msg.sender] >= _value);
+        
+        // Use internal _transfer function
+        _transfer(msg.sender, _to, _value);
+
+        return true;
+    }
+
+// function for transfering tokens that can be called internally by other functions (transferFrom & transfer 
+// (without the "_"leading the name))
+    function _transfer(
+        address _from,
+        address _to,
+        uint256 _value
+    ) internal {
         // Require tokens are being sent to a valid address / Not getting burned.
         require(_to != address(0));
-
         // Deduct tokens from spender
-        balanceOf[msg.sender] = balanceOf[msg.sender] - _value;
+        balanceOf[_from] = balanceOf[_from] - _value;
         // Credit tokens to receiver
         balanceOf[_to] = balanceOf[_to] + _value;
         //Emit Event
-        emit Transfer(msg.sender, _to, _value);
-        
-        return true;
+        emit Transfer(_from, _to, _value);
     }
 
 // function that approves the address allowed to spend our tokens & the amoung (_value) 
@@ -73,4 +84,21 @@ contract Token{
 
         return true;
     }
+
+    // function that allows someone else to spend tokens on our behalf, such as on a Crypto Currency Exchange.
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        // Check that they have enough tokens...
+        require(_value <= balanceOf[_from]);
+        // Check Approval
+        require(_value <= allowance[_from][msg.sender]);
+
+        // Reset the Allowance amount
+        allowance[_from][msg.sender] = allowance[_from][msg.sender] - _value;
+
+        // Spend Tokens on our behalf
+        _transfer(_from, _to, _value);
+
+        return true;
+    }
+
 }
