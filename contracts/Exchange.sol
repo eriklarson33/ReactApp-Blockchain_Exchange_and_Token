@@ -13,6 +13,14 @@ contract Exchange{
     // Event to record deposit
     event Deposit(address token, address user, uint256 amount, uint256 balance);
 
+    // Event to record Withdraw
+    event Withdraw(
+        address token,
+        address user,
+        uint256 amount,
+        uint256 balance
+    );
+
     constructor(address _feeAccount, uint256 _feePercent) {
         feeAccount = _feeAccount;
         feePercent = _feePercent;
@@ -32,6 +40,23 @@ contract Exchange{
         // Emit an Event
         emit Deposit(_token, msg.sender, _amount, tokens[_token][msg.sender]);
     }
+
+    function withdrawToken(address _token, uint256 _amount) public {
+        // Ensure the User has enough tokens to withdraw.
+        require(tokens[_token][msg.sender] >= _amount);
+
+        // Transfer Tokens to the User (msg.sender is the User)
+        // NOTE: Can use "Token.transfer(_to, _value);" function b/c exchange already holds the tokens & is the caller of the function.
+        Token(_token).transfer(msg.sender, _amount);
+
+
+        // Update User Balance
+        tokens[_token][msg.sender] = tokens[_token][msg.sender] - _amount;
+
+        // Emit an Event
+        emit Withdraw(_token, msg.sender, _amount, tokens[_token][msg.sender]);
+    }
+
     // Check Balances
     function balanceOf(address _token, address _user)
         public

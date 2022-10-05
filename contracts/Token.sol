@@ -87,7 +87,7 @@ contract Token{
 
     // function that allows someone else to spend tokens on our behalf, such as on a Crypto Currency Exchange.
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-        console.log(_from, _to, _value);
+        // console.log(_from, _to, _value);
         // Check that they have enough tokens...
         require(_value <= balanceOf[_from], 'insufficient balance');
         // Check Approval
